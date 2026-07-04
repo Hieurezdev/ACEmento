@@ -77,6 +77,11 @@ class ACE(ACEMementoRunner):
             use_rae=use_rae,
             rae_top_k=rae_top_k,
             case_bank_top_k=case_bank_top_k,
+            use_failure_memory=use_failure_memory,
+            failure_memory_top_k=failure_memory_top_k,
+            use_adversarial=use_adversarial,
+            adversarial_frequency=adversarial_frequency,
+            adversarial_model=adversarial_model,
             device=device
         )
 

@@ -149,10 +149,16 @@ class Executor:
             try:
                 if self.api_provider == "sglang":
                     # sglang doesn't support tools easily; return text
-                    response_text, call_info = timed_llm_call(
-                        self.api_client, self.api_provider, self.model, prompt,
-                        role="executor", call_id=f"{call_id}_step_{step_count}",
-                        max_tokens=self.max_tokens, log_dir=log_dir
+                    response_text, call_info = await asyncio.to_thread(
+                        timed_llm_call,
+                        self.api_client,
+                        self.api_provider,
+                        self.model,
+                        prompt,
+                        role="executor",
+                        call_id=f"{call_id}_step_{step_count}",
+                        max_tokens=self.max_tokens,
+                        log_dir=log_dir
                     )
                     executor_steps.append({"input": task_desc, "output": response_text})
                     return response_text, executor_steps, tool_calls_made

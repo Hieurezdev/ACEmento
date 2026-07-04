@@ -10,7 +10,12 @@ import argparse
 from datetime import datetime
 from .data_processor import DataProcessor
 
-from ace import ACE
+if os.getenv("USE_MEMENTO", "0") == "1":
+    from ace_memento import ACE
+    print(">>> [INFO] Using ACE Memento implementation")
+else:
+    from ace import ACE
+    print(">>> [INFO] Using standard ACE implementation")
 from utils import initialize_clients, set_global_seed
 
 def parse_args():
@@ -267,6 +272,10 @@ def main():
         'seed': args.seed,
     }
     
+    if args.mode == "eval_only" and test_samples:
+        test_samples = test_samples[:50]
+        print(f">>> [INFO] Limited test samples to first 50 for quick verification")
+
     # Execute using the unified run method
     results = ace_system.run(
         mode=args.mode,

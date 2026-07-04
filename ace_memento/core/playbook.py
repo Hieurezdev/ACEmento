@@ -28,6 +28,7 @@ class PlaybookManager:
         self.embedding_model_name = embedding_model_name
         self.device = device
         self._model = None
+        self._bullet_embeddings = None
 
         if initial_playbook:
             self.playbook = initial_playbook
@@ -101,6 +102,22 @@ class PlaybookManager:
         """Update the internal playbook representation and re-parse."""
         self.playbook = new_playbook
         self.section_headers, self.bullets = self.parse_playbook(new_playbook)
+        self._bullet_embeddings = None
+
+    def encode(self, texts: List[str]) -> Optional[np.ndarray]:
+        """Encode texts using the shared embedding model."""
+        self._load_model()
+        if self._model is not None:
+            try:
+                return self._model.encode(
+                    texts,
+                    convert_to_numpy=True,
+                    normalize_embeddings=True,
+                    show_progress_bar=False
+                ).astype(np.float32)
+            except Exception as e:
+                print(f"[PlaybookManager] Error in encode: {e}")
+        return None
 
     def retrieve_bullets(self, query: str, top_k: int = 10) -> str:
         """
@@ -128,25 +145,20 @@ class PlaybookManager:
             retrieved_indices = {self.bullets[idx]["id"] for score, idx in results[:top_k]}
         else:
             try:
-                query_emb = self._model.encode(
-                    [query],
-                    convert_to_numpy=True,
-                    normalize_embeddings=True,
-                    show_progress_bar=False
-                )[0]
+                query_emb = self.encode([query])[0]
 
-                contents = [b["content"] for b in self.bullets]
-                bullet_embs = self._model.encode(
-                    contents,
-                    convert_to_numpy=True,
-                    normalize_embeddings=True,
-                    show_progress_bar=False
-                )
+                if self._bullet_embeddings is None:
+                    contents = [b["content"] for b in self.bullets]
+                    self._bullet_embeddings = self.encode(contents)
 
-                similarities = np.dot(bullet_embs, query_emb)
-                top_indices = np.argsort(similarities)[::-1][:top_k]
-                retrieved_indices = {self.bullets[idx]["id"] for idx in top_indices}
-            except Exception:
+                if self._bullet_embeddings is not None:
+                    similarities = np.dot(self._bullet_embeddings, query_emb)
+                    top_indices = np.argsort(similarities)[::-1][:top_k]
+                    retrieved_indices = {self.bullets[idx]["id"] for idx in top_indices}
+                else:
+                    retrieved_indices = {b["id"] for b in self.bullets[:top_k]}
+            except Exception as e:
+                print(f"[PlaybookManager] Error in retrieval embedding search: {e}")
                 retrieved_indices = {b["id"] for b in self.bullets[:top_k]}
 
         # Form a playbook string maintaining structure but filtering bullets

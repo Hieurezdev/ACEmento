@@ -3,7 +3,12 @@ import json
 import argparse
 from .data_processor import DataProcessor, load_data
 
-from ace import ACE
+if os.getenv("USE_MEMENTO", "0") == "1":
+    from ace_memento import ACE
+    print(">>> [INFO] Using ACE Memento implementation")
+else:
+    from ace import ACE
+    print(">>> [INFO] Using standard ACE implementation")
 from utils import set_global_seed
 
 
